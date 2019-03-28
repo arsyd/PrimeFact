@@ -1,0 +1,186 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Factorisation. Prime factor succession. v3.0" />
+    <title>Prime Factor Decomposition(v3.0)</title>
+    <style>
+        #Num, #result {font-size: x-large}
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        td, th {padding: 4px; text-align: right}
+    </style>
+</head>
+<body>
+    <form onsubmit="Decomp(); return false;" onreset="DRes()">
+        <span>
+            <input id="Num" type="number" autofocus size="8" pattern="[0-9]*" />
+        </span>
+        <span>
+            <input id="Button1" type="submit" value="Decompose" />
+        </span>
+        <span id="result"></span>
+        <p>
+            <input type="reset" />
+            <span id="num-formatted"></span>
+        </p>
+    </form>
+    <script>
+        var ChkPts = LoadCheckPoints();
+
+        function Decomp() {
+            //document.body.tyle.cursor = "progress";
+            
+            var bCalcSuc = document.getElementById("isCalcSuc").checked;
+            var rtab = document.getElementById("rtab");
+            rtab.style.display = "table";
+
+            //clean rtab
+            for (i = rtab.rows.length; i > 1; i--) {
+                rtab.deleteRow(i-1);
+            }
+
+            n = parseInt(document.getElementById("Num").value);
+            document.getElementById("num-formatted").innerHTML = n.toLocaleString();
+            //console.log("n=", n);
+
+            //factor = { val: 1, pow: 1 };
+            var factors = new Array();
+            to = Math.floor(Math.sqrt(n));
+            //console.log("to=", to);
+            fact = 2;
+            while (fact <= to) {
+                if (n % fact == 0) {
+                    last = factors.length - 1;
+                    if (factors.length > 0) {
+                        if (factors[last].val == fact) {
+                            factors[last].pow++;
+                        }
+                        else
+                            factors.push({ val: fact, pow: 1 });
+                    }
+                    else
+                        factors.push({ val: fact, pow: 1 });
+                    n = n / fact;
+                }
+                else
+                    fact++;
+            }
+            if (n != 1) {
+                factors.push({ val: n, pow: 1 });
+            }
+
+            str = "";
+            for (i = 0; i < factors.length; i++) {
+                if (i > 0)
+                    str += '*';
+                str += factors[i].val;
+                if (factors[i].pow > 1) {
+                    //str += "^" + factors[i].pow;
+                    //str += "<sup>" + factors[i].pow + "</sup>";
+                    str += factors[i].pow.toString().sup();
+                }
+
+                r = rtab.insertRow();
+                c = r.insertCell();
+                c.innerHTML = factors[i].val.toLocaleString();
+
+                r.insertCell().innerHTML = factors[i].pow;
+                r.insertCell().innerHTML = bCalcSuc ? getSuccession(factors[i].val) : "";
+
+                var b = document.createElement("input");
+                b.type = "button";
+                b.value = "Calc Succession";
+                b.onclick = (function (n, r) { return function () { CalcSucHandler(n, r) }})(factors[i].val, i+1 );
+                r.insertCell().appendChild(b);
+
+            }
+            document.getElementById("result").innerHTML = str;
+          //document.body.style.cursor = "default";
+        }
+
+        function getSuccession(num) {
+            var sucCalcTimeLimit = 10000;   //msec
+            var startTime = new Date();
+            var inum, ifact, factTo, iSuc = 0;
+
+            if (num == 2) return 1;
+
+
+            //find check point
+            inum = 2; iSuc = 0;
+            for (ichk = 0; ichk < ChkPts.length && ChkPts[ichk].Key < num; ichk++) {
+                inum = ChkPts[ichk].Key;
+                iSuc = ChkPts[ichk].Value - 1;
+            }
+            ////////////////////////////////////
+
+            for (; inum < num; inum++) {
+                factTo = Math.floor(Math.sqrt(inum))
+                var bPrime = true;
+                for (ifact = 2; ifact <= factTo; ifact++) {
+                    if ((inum % ifact) == 0) {
+                        bPrime = false;
+                        break;
+                    }
+                }
+                if (bPrime)
+                    iSuc++;
+                t = new Date();
+                if (t - startTime > sucCalcTimeLimit) {
+                    if (window.confirm("Succession calculation takes too long. Skip succession calculation?")) {
+                        return "";
+                    }
+                    else {
+                        startTime = new Date();
+                    }
+                }
+            }
+            return iSuc+1;
+        }
+
+        function DRes() {
+            //alert("In DRes");
+            document.getElementById("result").innerText = "";
+            document.getElementById("rtab").style.display = "none";
+        }
+
+        function CalcSucHandler(num, row) {
+            var t = document.getElementById("rtab");
+            t.rows[row].cells[2].innerHTML = getSuccession(num);
+        }
+
+        function LoadCheckPoints() {
+            var xh = new XMLHttpRequest();
+            xh.open("GET", "CheckPoints.json", false);
+            xh.send();
+            var resp = xh.responseText;
+            var js = JSON.parse(resp);
+            /*
+            for (i = 0; i < js.length; i++) {
+                console.log("{0}\t{1}", js[i].Key, js[i].Value);
+            }
+            */
+
+            return js;
+        }
+    </script>
+
+    <div id="rtabarea">
+        <input type="checkbox" id="isCalcSuc" /> Calculate succession<br />
+        <table id="rtab" style="display: none">
+            <thead>
+                <tr>
+                    <th>Factor</th>
+                    <th>Power</th>
+                    <th>Succession</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</body>
+</html>
