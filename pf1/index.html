@@ -33,7 +33,7 @@
         //var ChkPts = LoadCheckPoints();
 
         function Decomp() {
-            //document.body.tyle.cursor = "progress";
+            document.body.style.cursor = "progress";
             
             var bCalcSuc = document.getElementById("isCalcSuc").checked;
             var rtab = document.getElementById("rtab");
@@ -90,18 +90,46 @@
                 c.innerHTML = factors[i].val.toLocaleString();
 
                 r.insertCell().innerHTML = factors[i].pow;
-                r.insertCell().innerHTML = bCalcSuc ? getSuccession(factors[i].val) : "";
-
+                r.insertCell().innerHTML = "";
+                //r.insertCell().innerHTML = bCalcSuc ? getPI(factors[i].val) : "";
+                /*
                 var b = document.createElement("input");
                 b.type = "button";
                 b.value = "Calc PI";
                 b.onclick = (function (n, r) { return function () { CalcSucHandler(n, r) }})(factors[i].val, i+1 );
                 r.insertCell().appendChild(b);
-
+                */
             }
             document.getElementById("result").innerHTML = str;
-          //document.body.style.cursor = "default";
+
+            var processed = 0
+            for (i = 0; i < factors.length; i++) {
+                xh = new XMLHttpRequest();
+                xh.open("GET", "PI/" + factors[i].val + "/" + (i+1), true);
+                xh.onreadystatechange = function () {
+                    if (this.readyState === 4 && this.status === 200) {
+                        var resp_ob = JSON.parse(this.responseText);
+                        var t = document.getElementById("rtab");
+                        t.rows[resp_ob.ind].cells[2].innerHTML = resp_ob.PI == 0 ? "Time out" : resp_ob.PI.toLocaleString();
+                        processed++
+                    }
+                    if (processed >= factors.length) {
+                        document.body.style.cursor = "default";
+                        document.getElementById("Num").disabled = false;
+                        document.getElementById("Button1").disabled = false;
+
+                    }
+                }
+                xh.send();
+            }
+
+            if (processed < factors.length) {
+                document.body.style.cursor = "progress";
+                document.getElementById("Num").disabled = true;
+                document.getElementById("Button1").disabled = true;
+            }
         }
+
 
         function getSuccession(num) {
             var sucCalcTimeLimit = 10000;   //msec
@@ -109,6 +137,8 @@
             var inum, ifact, factTo, iSuc = 0;
 
             if (num == 2) return 1;
+
+            document.body.style.cursor = "progress";
 
             //find checkpoint from server
             var xh = new XMLHttpRequest();
@@ -159,6 +189,13 @@
             return iSuc+1;
         }
 
+        function getPI(num) {
+            var xh = new XMLHttpRequest();
+            xh.open("GET", "PI/" + num, false);
+            xh.send();
+            return parseInt( xh.responseText);
+        }
+
         function DRes() {
             //alert("In DRes");
             document.getElementById("result").innerText = "";
@@ -167,7 +204,7 @@
 
         function CalcSucHandler(num, row) {
             var t = document.getElementById("rtab");
-            t.rows[row].cells[2].innerHTML = getSuccession(num);
+            t.rows[row].cells[2].innerHTML = getPI(num);
         }
 
         function LoadCheckPoints() {
@@ -187,7 +224,9 @@
     </script>
 
     <div id="rtabarea">
-        <input type="checkbox" id="isCalcSuc" /> Calculate PI<br />
+        <div style="display:none">
+            <input type="checkbox" id="isCalcSuc" checked style="display :none" /> Calculate PI<br />
+        </div>
         <table id="rtab" style="display: none">
             <thead>
                 <tr>
